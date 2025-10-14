@@ -4,11 +4,8 @@
 
 RawBench provides a standardized evaluation framework for comparing nanopore signal analysis tools. This repository contains job scripts, configuration templates, and setup tools for benchmarking:
 
-1. **Sigmoni** - Signal-based read classification using compressed indexing
-2. **SPUMONI** - BWT-based r-index implementation for repetitive text matching  
-3. **Basecalling tools** - Dorado and other ONT basecallers
-4. **Read mapping tools** - minimap2 and other alignment tools
-5. **Evaluation framework** - Standardized metrics and comparison scripts
+1. **RSA Evaluation framework** - RSA techniques, datasets, downstream tasks and metrics
+2. **Basecalling and read mapping tools** - Dorado and minimap2
 
 ## Quick Start
 
