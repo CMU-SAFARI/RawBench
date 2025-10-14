@@ -1,7 +1,5 @@
 # RawBench
 
-A comprehensive benchmarking framework for raw nanopore signal analysis
-
 ## Overview
 
 RawBench provides a standardized evaluation framework for comparing nanopore signal analysis tools. This repository contains job scripts, configuration templates, and setup tools for benchmarking:
