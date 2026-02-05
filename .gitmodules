@@ -1,0 +1,6 @@
+[submodule "sigmoni_submodule"]
+	path = sigmoni_submodule
+	url = https://github.com/vikshiv/sigmoni.git
+[submodule "spumoni_submodule"]
+	path = spumoni_submodule
+	url = https://github.com/oma219/spumoni.git

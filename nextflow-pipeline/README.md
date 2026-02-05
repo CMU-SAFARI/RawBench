@@ -1,77 +1,57 @@
-# RawBench Modular Nanopore Signal Analysis Pipeline
+# RawBench Nextflow pipeline
 
-A modular Nextflow pipeline for systematic evaluation of nanopore signal analysis components extracted from RawHash2.
+Nextflow pipeline that breaks RawHash2's signal analysis into swappable stages: reference encoding, signal segmentation, and representation matching. The idea is to let you mix and match components for evaluation, though right now only RawHash2's own methods are implemented.
 
-## Overview
+## Prerequisites
 
-This pipeline provides configurable evaluation of three core components:
+- Nextflow >= 22.04.0
+- Java 8+
+- GCC/G++ (to compile the C/C++ binaries)
+- RawHash2 built and available at `../rawhash2/`
 
-1. **Reference Genome Encoding** - Convert FASTA to expected signals using different pore models
-2. **Signal Segmentation** - Extract events from raw signals using various methods (t-test, etc.)
-3. **Representation Matching** - Match segmented events to encoded references using different algorithms
-
-## Quick Start
-
-### Prerequisites
-
-- Nextflow >=22.04.0
-- Java 8 or later
-- GCC/G++ compilers (for building binary components)
-
-### Installation
+## Installation
 
 ```bash
-# Navigate to the pipeline directory (assumes you have the rawbench repository)
 cd rawbench/nextflow-pipeline
 
-# First, ensure RawHash2 is built (required dependency)
+# Build RawHash2 first (the pipeline links against it)
 cd ../rawhash2
 make
 cd ../nextflow-pipeline
 
-# Build pipeline binary components
+# Build the pipeline's C binaries
 cd bin
 make all
 cd ..
 
-# Verify installation
+# Check it works
 nextflow run main.nf --help
 ```
 
-### Step-by-Step Setup
-
-1. **Install Nextflow**:
-   ```bash
-   curl -s https://get.nextflow.io | bash
-   sudo mv nextflow /usr/local/bin/
-   ```
-
-2. **Prepare RawHash2** (required for binary components):
-   ```bash
-   cd rawbench/rawhash2
-   make  # Build RawHash2 first
-   ```
-
-3. **Build Pipeline Components**:
-   ```bash
-   cd ../nextflow-pipeline/bin
-   make all  # This links against RawHash2 libraries
-   ```
-
-4. **Prepare Your Data**:
-   - Reference genome in FASTA format
-   - Nanopore signal data in POD5 or FAST5 format
-
-### Basic Usage
+Or step by step:
 
 ```bash
-# Run with RawHash2-equivalent settings
+# 1. Install Nextflow
+curl -s https://get.nextflow.io | bash
+sudo mv nextflow /usr/local/bin/
+
+# 2. Build RawHash2
+cd rawbench/rawhash2 && make
+
+# 3. Build pipeline binaries (links against RawHash2)
+cd ../nextflow-pipeline/bin && make all
+```
+
+## Running
+
+```bash
+# Replicate RawHash2 exactly
 nextflow run main.nf \
   --reference_fasta refs/ecoli.fa \
   --signal_files "../pod5/ecoli.pod5" \
   --preset rawhash2
 
-# Run with custom configuration
+# Pick components yourself
 nextflow run main.nf \
   --reference_fasta refs/hsapiens.fa \
   --signal_files "../pod5/hsapiens.pod5" \
@@ -80,110 +60,69 @@ nextflow run main.nf \
   --matching_method hash
 ```
 
-### Configuration Profiles
+### Profiles
 
-- `standard` - Local execution with default resources
-- `cluster` - SLURM cluster execution  
-- `rawhash2` - Exact RawHash2 replication settings
+- `standard` -- runs locally, 4 CPUs, 8 GB RAM
+- `cluster` -- submits to SLURM (partition names are hardcoded to our cluster, edit `nextflow.config` for yours)
+- `rawhash2` -- loads RawHash2-specific settings from `conf/rawhash2.config`
 
 ```bash
-# Run on SLURM cluster with RawHash2 settings
 nextflow run main.nf -profile cluster,rawhash2 \
   --reference_fasta refs/ecoli.fa \
   --signal_files "../pod5/ecoli.pod5"
 ```
 
-## Pipeline Architecture
+## What the pipeline does
 
-### Components
+Four stages, each in its own Nextflow module:
 
-- `REFERENCE_ENCODING` - Extracts RawHash2's `ri_seq_to_sig()` functionality
-- `SIGNAL_SEGMENTATION` - Extracts RawHash2's `detect_events()` functionality  
-- `REPRESENTATION_MATCHING` - Extracts RawHash2's sketching + chaining logic
-- `EVALUATE_RESULTS` - Integration with RawBench evaluation framework
+1. `REFERENCE_ENCODING` -- converts FASTA to expected signal levels using a pore model. Extracted from RawHash2's `ri_seq_to_sig()`.
+2. `SIGNAL_SEGMENTATION` -- detects events in raw signal (t-test segmentation). From RawHash2's `detect_events()`.
+3. `REPRESENTATION_MATCHING` -- hashes segmented events and chains matches against the encoded reference. From RawHash2's sketching + chaining code.
+4. `EVALUATE_RESULTS` -- runs evaluation metrics on the output PAF.
 
-### Modular Design
+The binary sources map to RawHash2 files:
+- `reference_encoder.c` from `rawhash2/src/rsig.c`
+- `signal_segmenter.c` from `rawhash2/src/revent.c`
+- `hash_matcher.cpp` from `rawhash2/src/rsketch.c`, `rseed.c`, `rmap.cpp`
 
-Each component can be configured independently:
+### What's actually swappable (and what isn't yet)
 
-```bash
-# Different pore models
---pore_model uncalled4_r1041|ont_r1041|legacy_r94
+The `--pore_model` flag has two options (`uncalled4_r1041` and `ont_r1041`), both from RawHash2's bundled models. Segmentation is t-test only. Matching is hash only. Adding more methods is the point of the modular design, but it hasn't happened yet.
 
-# Different segmentation methods  
---segmentation_method ttest
-
-# Different matching algorithms
---matching_method hash
-```
-
-## Validation
-
-The pipeline is designed to produce **identical results** to RawHash2 when using:
-
-```bash
-nextflow run main.nf --preset rawhash2 \
-  --reference_fasta data/reference.fasta \
-  --signal_files "data/signals/*.pod5"
-```
-
-This validation ensures component extraction is correct before enabling modular evaluation.
-
-## Output Structure
+## Output
 
 ```
 results/
-├── reference_encoding/     # Encoded reference signals
-├── signal_segmentation/    # Segmented event streams  
+├── reference_encoding/      # encoded reference signals
+├── signal_segmentation/     # segmented event streams
 ├── representation_matching/ # PAF mapping results
-├── evaluation/            # Performance metrics
-├── timeline.html          # Execution timeline
-├── report.html           # Pipeline report
-└── trace.txt             # Resource usage trace
+├── evaluation/              # metrics
+├── timeline.html            # Nextflow execution timeline
+├── report.html              # Nextflow report
+└── trace.txt                # resource usage per task
 ```
 
-## Integration with RawBench
+## Adding new components
 
-The pipeline integrates with the existing RawBench evaluation framework:
-
-- Uses RawBench environment setup (`scripts/setup_env.sh`)
-- Compatible with RawBench job scripts and evaluation tools
-- Outputs results in formats compatible with RawBench metrics
-
-## Development
-
-### Adding New Components
-
-1. Create new module in `modules/`
-2. Add binary implementation in `bin/`
-3. Update `main.nf` workflow
-4. Add configuration in `conf/`
-
-### Building Components
-
-The binary components are extracted from RawHash2 source:
-
-- `reference_encoder.c` - From `rawhash2/src/rsig.c`
-- `signal_segmenter.c` - From `rawhash2/src/revent.c`  
-- `hash_matcher.cpp` - From `rawhash2/src/rsketch.c`, `rseed.c`, `rmap.cpp`
-
-Binary components are functional and linked against the RawHash2 library for production use.
+1. Write a new module in `modules/`
+2. Put the binary in `bin/`
+3. Wire it into `main.nf`
+4. Add any config in `conf/`
 
 ## Citation
 
-If you use this pipeline in your research, please cite:
+If you use this, cite RawHash2 (the signal analysis components come from there):
 
-**RawHash2** (for the extracted signal analysis components):
-```
+```bibtex
 @article{firtina2023rawhash2,
-	title = {{RawHash2}: {Mapping DNA Sequences Directly From Raw Nanopore Signals Using Hash-based Seeding and Adaptive Quantization}},
-	author = {Firtina, Can and Mansouri Ghiasi, Arian and Lindegger, Joel and Singh, Gagandeep and Cavlak, Melina Bastas and Mao, Haiyu and Alser, Mohammed},
-	journal = {Bioinformatics},
-	volume = {39},
-	number = {22},
-	pages = {4153--4162},
-	year = {2023},
-	doi = {10.1093/bioinformatics/btad272},
-	url = {https://doi.org/10.1093/bioinformatics/btad272},
+  title = {{RawHash2}: {Mapping DNA Sequences Directly From Raw Nanopore Signals Using Hash-based Seeding and Adaptive Quantization}},
+  author = {Firtina, Can and Mansouri Ghiasi, Arian and Lindegger, Joel and Singh, Gagandeep and Cavlak, Melina Bastas and Mao, Haiyu and Alser, Mohammed},
+  journal = {Bioinformatics},
+  volume = {39},
+  number = {22},
+  pages = {4153--4162},
+  year = {2023},
+  doi = {10.1093/bioinformatics/btad272}
 }
 ```

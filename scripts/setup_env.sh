@@ -22,8 +22,8 @@ export BASECALLED_READS_DIR="${RAWBENCH_ROOT}/basecalled_reads"
 export SIGMONI_DIR="${RAWBENCH_ROOT}/sigmoni_submodule"
 export SPUMONI_BUILD_DIR="${RAWBENCH_ROOT}/spumoni_submodule/build"
 
-# Add SPUMONI to PATH
-export PATH="${SPUMONI_BUILD_DIR}:${PATH}"
+# Add SPUMONI and its helper programs to PATH
+export PATH="${SPUMONI_BUILD_DIR}:${SPUMONI_BUILD_DIR}/src:${SPUMONI_BUILD_DIR}/bin:${PATH}"
 
 # Create output directories if they don't exist
 mkdir -p "${OUTPUTS_DIR}" "${BASECALLED_READS_DIR}"
