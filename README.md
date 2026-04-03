@@ -88,7 +88,8 @@ git submodule update --init --recursive
 # Sigmoni (r-index classification) -- needs ont-fast5-api to read fast5
 conda create --name sigmoni python=3.8 -y
 conda activate sigmoni
-conda install h5py numpy scipy ont-fast5-api -y
+conda install h5py numpy scipy -y
+conda install bioconda::ont-fast5-api
 pip install uncalled4
 
 # minimap2 (basecall-then-map baseline)
