@@ -89,7 +89,7 @@ git submodule update --init --recursive
 conda create --name sigmoni python=3.8 -y
 conda activate sigmoni
 conda install h5py numpy scipy -y
-conda install bioconda::ont-fast5-api
+conda install bioconda::ont-fast5-api -y
 pip install uncalled4
 
 # minimap2 (basecall-then-map baseline)
